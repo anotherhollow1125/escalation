@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use clap::Parser;
-use escalation::{Classify, ErrorInfo, Report, classify};
+use escalation::{Report, classify};
 use hooq::hooq;
 use thiserror::Error;
 
@@ -10,6 +10,8 @@ struct HogeError;
 
 classify! {
     anyhow::Error => HogeError;
+    HogeError => FugaError;
+    FugaError => BarError;
 }
 
 #[hooq]
@@ -25,12 +27,6 @@ fn hoge(n: usize) -> Result<(), Report<HogeError>> {
 #[error("FugaError")]
 struct FugaError;
 
-impl Classify<HogeError> for FugaError {
-    fn classify(_error: &HogeError) -> (Vec<ErrorInfo>, FugaError) {
-        (Vec::new(), FugaError)
-    }
-}
-
 #[hooq]
 fn fuga(n: usize) -> Result<(), Report<FugaError>> {
     hoge(n)?;
@@ -41,12 +37,6 @@ fn fuga(n: usize) -> Result<(), Report<FugaError>> {
 #[derive(Debug, Error)]
 #[error("BarError")]
 struct BarError;
-
-impl Classify<FugaError> for BarError {
-    fn classify(_error: &FugaError) -> (Vec<ErrorInfo>, BarError) {
-        (Vec::new(), BarError)
-    }
-}
 
 #[hooq]
 fn bar(n: usize) -> Result<(), Report<BarError>> {
