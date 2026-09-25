@@ -1,0 +1,27 @@
+[default]
+method = """.map_err(|mut e| {
+    use ::escalation::{IntoNewReport, LocationInfo};
+
+    let path = $path;
+    let fn_name = $fn_name;
+    let line = $line as u32;
+    let col = $col as u32;
+    let expr = ::hooq::source_excerpt_helpers::one_line_stringify!($source);
+    let tag = $tag;
+
+    let info = LocationInfo {
+        path,
+        fn_name,
+        line,
+        col,
+        tag,
+        expr,
+    };
+
+    if let Some(r) = ::std::any::try_as_dyn_mut::<_, dyn IntoNewReport<$error_type>>(&mut e) {
+        r.into_new_report($error_kind, info)
+    } else {
+        (e, info).into() // ここでリフレクションできないのでエラー
+    }
+})"""
+bindings = { tag = "\"no_tag\"", error_type = "()", error_kind = "()" }
