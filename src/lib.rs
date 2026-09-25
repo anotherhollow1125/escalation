@@ -1,13 +1,11 @@
-#![feature(try_as_dyn)]
-
-use std::any::try_as_dyn_mut;
-use std::panic::Location;
+use std::{any::type_name, panic::Location};
 
 use thiserror::Error;
 
-#[derive(Error, Debug, Clone)]
+#[derive(Error, Debug, Clone, Copy)]
 #[error("{path}:{fn_name}:{line}:{col}")]
-pub struct LocationInfo {
+pub struct ErrorInfo {
+    pub error_type_name: &'static str,
     pub path: &'static str,
     pub fn_name: &'static str,
     pub line: u32,
@@ -17,70 +15,47 @@ pub struct LocationInfo {
 }
 
 pub trait Recognize<T> {
-    fn recognize(error: &T) -> Self;
+    fn recognize(error: &T) -> (Vec<ErrorInfo>, Self);
 }
 
 impl<T, U> Recognize<Report<T>> for U
 where
     U: Recognize<T>,
 {
-    fn recognize(error: &Report<T>) -> Self {
-        Self::recognize(&error.inner)
+    fn recognize(error: &Report<T>) -> (Vec<ErrorInfo>, Self) {
+        let (_, s) = Self::recognize(&error.inner);
+
+        (error.trace.clone(), s)
     }
 }
 
 #[derive(Debug)]
 pub struct Report<E> {
     inner: E,
-    trace: Vec<LocationInfo>,
+    trace: Vec<ErrorInfo>,
 }
 
 impl<E> Report<E> {
-    pub fn handle(self) -> (E, Vec<LocationInfo>) {
+    pub fn handle(self) -> (E, Vec<ErrorInfo>) {
         (self.inner, self.trace)
     }
 }
 
-trait IntoTrace {
-    fn into_trace(&mut self) -> Option<Vec<LocationInfo>>;
-}
-
-impl<T> IntoTrace for Option<&Report<T>> {
-    fn into_trace(&mut self) -> Option<Vec<LocationInfo>> {
-        if let Some(s) = self.take() {
-            let Report { inner: _, trace } = s;
-
-            Some(trace.clone())
-        } else {
-            None
-        }
-    }
-}
-
 pub trait IntoNewReport<E> {
-    fn into_new_report(&self, location: LocationInfo, specified: Option<E>) -> Report<E>;
+    fn into_new_report(&self, location: ErrorInfo, specified: Option<E>) -> Report<E>;
 }
 
 impl<T, U> IntoNewReport<U> for T
 where
     U: Recognize<T>,
 {
-    fn into_new_report(&self, location: LocationInfo, specified: Option<U>) -> Report<U> {
-        let default = U::recognize(self);
-        let mut wrapped = Some(self);
-        if let Some(r) = try_as_dyn_mut::<_, dyn IntoTrace>(&mut wrapped) {
-            let mut trace = r.into_trace().unwrap();
-            trace.push(location);
+    fn into_new_report(&self, location: ErrorInfo, specified: Option<U>) -> Report<U> {
+        let (mut trace, default) = U::recognize(self);
+        trace.push(location);
 
-            Report {
-                inner: specified.unwrap_or(default),
-                trace,
-            }
-        } else {
-            Report {
-                inner: specified.unwrap_or(default),
-                trace: vec![location],
-            }
+        Report {
+            inner: specified.unwrap_or(default),
+            trace,
         }
     }
 }
@@ -97,7 +72,8 @@ impl<E> IntoReport for E {
 
         Report {
             inner: self,
-            trace: vec![LocationInfo {
+            trace: vec![ErrorInfo {
+                error_type_name: type_name::<E>(),
                 path: location.file(),
                 fn_name: "<unknown>",
                 line: location.line(),

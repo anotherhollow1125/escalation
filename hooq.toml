@@ -1,7 +1,8 @@
 [default]
 method = """.map_err(|mut e| {
-    use ::escalation::{IntoNewReport, LocationInfo, Recognize};
+    use ::escalation::{IntoNewReport, ErrorInfo, Recognize};
 
+    let error_type_name = ::std::any::type_name_of_val(&e);
     let path = $path;
     let fn_name = $fn_name;
     let line = $line as u32;
@@ -9,7 +10,8 @@ method = """.map_err(|mut e| {
     let expr = ::hooq::source_excerpt_helpers::one_line_stringify!($source);
     let tag = $tag;
 
-    let info = LocationInfo {
+    let info = ErrorInfo {
+        error_type_name,
         path,
         fn_name,
         line,
