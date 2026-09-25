@@ -1,3 +1,6 @@
+#![feature(try_as_dyn)]
+
+use std::any::try_as_dyn_mut;
 use std::panic::Location;
 
 use thiserror::Error;
@@ -13,6 +16,7 @@ pub struct LocationInfo {
     pub tag: &'static str,
 }
 
+#[derive(Debug)]
 pub struct Report<E> {
     inner: E,
     trace: Vec<LocationInfo>,
@@ -24,30 +28,67 @@ impl<E> Report<E> {
     }
 }
 
-pub trait IntoNewReport<E> {
-    fn into_new_report(&mut self, error: E, location: LocationInfo) -> Report<E>;
+trait CanBeConvertedAnotherReport<U> {
+    fn into_new_report_inner(
+        &mut self,
+        location: LocationInfo,
+    ) -> (&dyn RecognizedAs<U>, Vec<LocationInfo>);
 }
 
-impl<E, U> IntoNewReport<E> for Report<U> {
-    fn into_new_report(&mut self, error: E, location: LocationInfo) -> Report<E> {
-        let mut trace: Vec<_> = self.trace.drain(..).collect();
+impl<E, U> CanBeConvertedAnotherReport<U> for Report<E>
+where
+    E: RecognizedAs<U>,
+{
+    fn into_new_report_inner(
+        &mut self,
+        location: LocationInfo,
+    ) -> (&dyn RecognizedAs<U>, Vec<LocationInfo>) {
+        let Report { inner, trace } = self;
+        let mut trace: Vec<_> = trace.drain(..).collect();
 
         trace.push(location);
 
-        Report {
-            inner: error,
-            trace,
+        (inner, trace)
+    }
+}
+
+pub trait IntoNewReport<E> {
+    fn into_new_report(&mut self, location: LocationInfo) -> Report<E>;
+}
+
+impl<T, U> IntoNewReport<U> for T
+where
+    T: RecognizedAs<U>,
+{
+    fn into_new_report(&mut self, location: LocationInfo) -> Report<U> {
+        if let Some(r) = try_as_dyn_mut::<_, dyn CanBeConvertedAnotherReport<U>>(self) {
+            let (inner, trace) = r.into_new_report_inner(location);
+
+            Report {
+                inner: inner.recognized_as(),
+                trace,
+            }
+        } else {
+            Report {
+                inner: self.recognized_as(),
+                trace: vec![location],
+            }
         }
     }
 }
 
-impl<E> From<E> for Report<E> {
+/// hooq::skip する場合にReport化するためのメソッド
+pub trait IntoReport: Sized {
+    fn into_report(self) -> Report<Self>;
+}
+
+impl<E> IntoReport for E {
     #[track_caller]
-    fn from(error: E) -> Self {
+    fn into_report(self) -> Report<Self> {
         let location = Location::caller();
 
         Report {
-            inner: error,
+            inner: self,
             trace: vec![LocationInfo {
                 path: location.file(),
                 fn_name: "<unknown>",
@@ -60,11 +101,24 @@ impl<E> From<E> for Report<E> {
     }
 }
 
-impl<E> From<(E, LocationInfo)> for Report<E> {
-    fn from((error, info): (E, LocationInfo)) -> Self {
-        Report {
-            inner: error,
-            trace: vec![info],
-        }
+pub trait RecognizedAs<T> {
+    fn recognized_as(&self) -> T;
+}
+
+impl<T> RecognizedAs<T> for T
+where
+    T: Clone,
+{
+    fn recognized_as(&self) -> T {
+        self.clone()
+    }
+}
+
+impl<T, U> RecognizedAs<T> for Report<U>
+where
+    U: RecognizedAs<T>,
+{
+    fn recognized_as(&self) -> T {
+        self.inner.recognized_as()
     }
 }

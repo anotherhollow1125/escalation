@@ -1,6 +1,6 @@
 [default]
 method = """.map_err(|mut e| {
-    use ::escalation::{IntoNewReport, LocationInfo};
+    use ::escalation::{IntoNewReport, LocationInfo, RecognizedAs};
 
     let path = $path;
     let fn_name = $fn_name;
@@ -18,10 +18,6 @@ method = """.map_err(|mut e| {
         expr,
     };
 
-    if let Some(r) = ::std::any::try_as_dyn_mut::<_, dyn IntoNewReport<$error_type>>(&mut e) {
-        r.into_new_report($error_kind, info)
-    } else {
-        (e, info).into() // ここでリフレクションできないのでエラー
-    }
+    e.into_new_report(info)
 })"""
-bindings = { tag = "\"no_tag\"", error_type = "()", error_kind = "()" }
+bindings = { tag = "\"no_tag\"" }
