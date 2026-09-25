@@ -53,24 +53,24 @@ where
 }
 
 pub trait IntoNewReport<E> {
-    fn into_new_report(&mut self, location: LocationInfo) -> Report<E>;
+    fn into_new_report(&mut self, location: LocationInfo, specified: Option<E>) -> Report<E>;
 }
 
 impl<T, U> IntoNewReport<U> for T
 where
     T: RecognizedAs<U>,
 {
-    fn into_new_report(&mut self, location: LocationInfo) -> Report<U> {
+    fn into_new_report(&mut self, location: LocationInfo, specified: Option<U>) -> Report<U> {
         if let Some(r) = try_as_dyn_mut::<_, dyn CanBeConvertedAnotherReport<U>>(self) {
             let (inner, trace) = r.into_new_report_inner(location);
 
             Report {
-                inner: inner.recognized_as(),
+                inner: specified.unwrap_or(inner.recognized_as()),
                 trace,
             }
         } else {
             Report {
-                inner: self.recognized_as(),
+                inner: specified.unwrap_or(self.recognized_as()),
                 trace: vec![location],
             }
         }
