@@ -1,6 +1,6 @@
 [default]
 method = """.map_err(|mut e| {
-    use ::escalation::{IntoNewReport, LocationInfo, RecognizedAs};
+    use ::escalation::{IntoNewReport, LocationInfo, Recognize};
 
     let path = $path;
     let fn_name = $fn_name;

@@ -5,7 +5,7 @@ use std::panic::Location;
 
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 #[error("{path}:{fn_name}:{line}:{col}")]
 pub struct LocationInfo {
     pub path: &'static str,
@@ -14,6 +14,19 @@ pub struct LocationInfo {
     pub col: u32,
     pub expr: &'static str,
     pub tag: &'static str,
+}
+
+pub trait Recognize<T> {
+    fn recognize(error: &T) -> Self;
+}
+
+impl<T, U> Recognize<Report<T>> for U
+where
+    U: Recognize<T>,
+{
+    fn recognize(error: &Report<T>) -> Self {
+        Self::recognize(&error.inner)
+    }
 }
 
 #[derive(Debug)]
@@ -28,49 +41,44 @@ impl<E> Report<E> {
     }
 }
 
-trait CanBeConvertedAnotherReport<U> {
-    fn into_new_report_inner(
-        &mut self,
-        location: LocationInfo,
-    ) -> (&dyn RecognizedAs<U>, Vec<LocationInfo>);
+trait IntoTrace {
+    fn into_trace(&mut self) -> Option<Vec<LocationInfo>>;
 }
 
-impl<E, U> CanBeConvertedAnotherReport<U> for Report<E>
-where
-    E: RecognizedAs<U>,
-{
-    fn into_new_report_inner(
-        &mut self,
-        location: LocationInfo,
-    ) -> (&dyn RecognizedAs<U>, Vec<LocationInfo>) {
-        let Report { inner, trace } = self;
-        let mut trace: Vec<_> = trace.drain(..).collect();
+impl<T> IntoTrace for Option<&Report<T>> {
+    fn into_trace(&mut self) -> Option<Vec<LocationInfo>> {
+        if let Some(s) = self.take() {
+            let Report { inner: _, trace } = s;
 
-        trace.push(location);
-
-        (inner, trace)
+            Some(trace.clone())
+        } else {
+            None
+        }
     }
 }
 
 pub trait IntoNewReport<E> {
-    fn into_new_report(&mut self, location: LocationInfo, specified: Option<E>) -> Report<E>;
+    fn into_new_report(&self, location: LocationInfo, specified: Option<E>) -> Report<E>;
 }
 
 impl<T, U> IntoNewReport<U> for T
 where
-    T: RecognizedAs<U>,
+    U: Recognize<T>,
 {
-    fn into_new_report(&mut self, location: LocationInfo, specified: Option<U>) -> Report<U> {
-        if let Some(r) = try_as_dyn_mut::<_, dyn CanBeConvertedAnotherReport<U>>(self) {
-            let (inner, trace) = r.into_new_report_inner(location);
+    fn into_new_report(&self, location: LocationInfo, specified: Option<U>) -> Report<U> {
+        let default = U::recognize(self);
+        let mut wrapped = Some(self);
+        if let Some(r) = try_as_dyn_mut::<_, dyn IntoTrace>(&mut wrapped) {
+            let mut trace = r.into_trace().unwrap();
+            trace.push(location);
 
             Report {
-                inner: specified.unwrap_or(inner.recognized_as()),
+                inner: specified.unwrap_or(default),
                 trace,
             }
         } else {
             Report {
-                inner: specified.unwrap_or(self.recognized_as()),
+                inner: specified.unwrap_or(default),
                 trace: vec![location],
             }
         }
@@ -98,27 +106,5 @@ impl<E> IntoReport for E {
                 tag: "<unknown>",
             }],
         }
-    }
-}
-
-pub trait RecognizedAs<T> {
-    fn recognized_as(&self) -> T;
-}
-
-impl<T> RecognizedAs<T> for T
-where
-    T: Clone,
-{
-    fn recognized_as(&self) -> T {
-        self.clone()
-    }
-}
-
-impl<T, U> RecognizedAs<T> for Report<U>
-where
-    U: RecognizedAs<T>,
-{
-    fn recognized_as(&self) -> T {
-        self.inner.recognized_as()
     }
 }
