@@ -3,7 +3,11 @@ name = "escalation"
 version = "0.1.0"
 edition = "2024"
 
+[workspace]
+members = ["escalation-macros"]
+
 [dependencies]
+escalation-macros = { path = "escalation-macros" }
 thiserror = "2.0.21"
 
 [dev-dependencies]

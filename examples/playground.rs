@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use clap::Parser;
-use escalation::{ErrorInfo, Recognize, Report};
+use escalation::{ErrorInfo, Recognize, Report, recognize};
 use hooq::hooq;
 use thiserror::Error;
 
@@ -8,10 +8,8 @@ use thiserror::Error;
 #[error("HogeError")]
 struct HogeError;
 
-impl Recognize<anyhow::Error> for HogeError {
-    fn recognize(_error: &anyhow::Error) -> (Vec<ErrorInfo>, HogeError) {
-        (Vec::new(), HogeError)
-    }
+recognize! {
+    anyhow::Error => HogeError;
 }
 
 #[hooq]

@@ -1,5 +1,6 @@
 use std::{any::type_name, panic::Location};
 
+pub use escalation_macros::recognize;
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone, Copy)]
