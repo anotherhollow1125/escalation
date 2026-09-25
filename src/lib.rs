@@ -1,6 +1,6 @@
 use std::{any::type_name, panic::Location};
 
-pub use escalation_macros::recognize;
+pub use escalation_macros::classify;
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone, Copy)]
@@ -15,16 +15,16 @@ pub struct ErrorInfo {
     pub tag: &'static str,
 }
 
-pub trait Recognize<T> {
-    fn recognize(error: &T) -> (Vec<ErrorInfo>, Self);
+pub trait Classify<T> {
+    fn classify(error: &T) -> (Vec<ErrorInfo>, Self);
 }
 
-impl<T, U> Recognize<Report<T>> for U
+impl<T, U> Classify<Report<T>> for U
 where
-    U: Recognize<T>,
+    U: Classify<T>,
 {
-    fn recognize(error: &Report<T>) -> (Vec<ErrorInfo>, Self) {
-        let (_, s) = Self::recognize(&error.inner);
+    fn classify(error: &Report<T>) -> (Vec<ErrorInfo>, Self) {
+        let (_, s) = Self::classify(&error.inner);
 
         (error.trace.clone(), s)
     }
@@ -48,10 +48,10 @@ pub trait IntoNewReport<E> {
 
 impl<T, U> IntoNewReport<U> for T
 where
-    U: Recognize<T>,
+    U: Classify<T>,
 {
     fn into_new_report(&self, location: ErrorInfo, specified: Option<U>) -> Report<U> {
-        let (mut trace, default) = U::recognize(self);
+        let (mut trace, default) = U::classify(self);
         trace.push(location);
 
         Report {

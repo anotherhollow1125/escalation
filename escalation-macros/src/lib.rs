@@ -6,7 +6,7 @@ use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::{Expr, Pat, Path, Token, Type, parse_macro_input};
 
-/// `Recognize` 実装のボイラープレートを生成するマクロ
+/// `Classify` 実装のボイラープレートを生成するマクロ
 ///
 /// 各ルールは `変換元 => 変換先;` の形で、`;` 区切りで複数書けます (最後の `;` は省略可)。
 ///
@@ -29,7 +29,7 @@ use syn::{Expr, Pat, Path, Token, Type, parse_macro_input};
 /// # 例
 ///
 /// ```ignore
-/// recognize! {
+/// classify! {
 ///     HogeError => LogicalError::Xxx;
 ///     FugaError, BarError => LogicalError::Yyy("Yyy occurred");
 ///     BazError => LogicalError, LogicalError::Zzz;
@@ -37,7 +37,7 @@ use syn::{Expr, Pat, Path, Token, Type, parse_macro_input};
 /// }
 /// ```
 #[proc_macro]
-pub fn recognize(input: TokenStream) -> TokenStream {
+pub fn classify(input: TokenStream) -> TokenStream {
     let Rules(rules) = parse_macro_input!(input as Rules);
 
     rules
@@ -187,8 +187,8 @@ impl Rule {
                 };
 
                 quote! {
-                    impl ::escalation::Recognize<#ty> for #target {
-                        fn recognize(#pat: &#ty) -> (
+                    impl ::escalation::Classify<#ty> for #target {
+                        fn classify(#pat: &#ty) -> (
                             ::std::vec::Vec<::escalation::ErrorInfo>,
                             #target,
                         ) {

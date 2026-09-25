@@ -1,6 +1,6 @@
 [default]
 method = """.map_err(|mut e| {
-    use ::escalation::{IntoNewReport, ErrorInfo, Recognize};
+    use ::escalation::{IntoNewReport, ErrorInfo, Classify};
 
     let error_type_name = ::std::any::type_name_of_val(&e);
     let path = $path;
