@@ -40,17 +40,26 @@ pub trait Classify<T> {
     fn classify(error: T) -> Self;
 }
 
-struct Decomposed<T> {
-    cause: Option<ErrorCause>,
+#[doc(hidden)]
+pub struct Decomposed<T> {
+    cause: ErrorCause,
     trace: Vec<ErrorInfo>,
     classified: T,
 }
 
-pub trait Decompose<T>: Classify<T> + Sized {
-    #[allow(private_interfaces)]
+pub trait Decompose<T>: Classify<T> + Sized
+where
+    T: Display + Debug,
+{
     fn decompose(error: T) -> Decomposed<Self> {
+        let cause = ErrorCause {
+            display: error.to_string(),
+            debug: format!("{error:?}"),
+            error_type_name: type_name::<T>(),
+        };
+
         Decomposed {
-            cause: None,
+            cause,
             trace: Vec::new(),
             classified: Self::classify(error),
         }
@@ -114,9 +123,9 @@ where
 
 impl<T, U> Decompose<Report<T>> for U
 where
+    T: Debug,
     U: Classify<T>,
 {
-    #[allow(private_interfaces)]
     fn decompose(report: Report<T>) -> Decomposed<U> {
         let Report {
             inner,
@@ -125,7 +134,7 @@ where
         } = report;
 
         Decomposed {
-            cause: Some(cause),
+            cause,
             trace,
             classified: U::classify(inner),
         }
@@ -142,17 +151,11 @@ where
     U: Decompose<T>,
 {
     fn escalate(self, location: ErrorInfo, specified: Option<U>) -> Report<U> {
-        let default_cause = ErrorCause {
-            display: self.to_string(),
-            debug: format!("{self:?}"),
-            error_type_name: type_name::<T>(),
-        };
         let Decomposed {
             cause,
             mut trace,
             classified,
         } = U::decompose(self);
-        let cause = cause.unwrap_or(default_cause);
 
         trace.push(location);
 

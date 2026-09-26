@@ -1,20 +1,41 @@
-use escalation::{Classify, Decompose, classify};
+use std::fmt::{Debug, Display};
 
+use escalation::{Classify, Decompose, classify};
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+#[error("hoge error")]
 struct HogeError;
+
+#[derive(Debug, Error)]
+#[error("fuga error")]
 struct FugaError;
+
+#[derive(Debug, Error)]
+#[error("bar error")]
 struct BarError;
+
+#[derive(Debug, Error)]
+#[error("baz error")]
 struct BazError;
+
+#[derive(Debug, Error)]
+#[error("has field error {inner} {other}")]
 struct HasFieldError {
     inner: i32,
     #[allow(dead_code)]
     other: bool,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 enum LogicalError {
+    #[error("Xxx")]
     Xxx,
+    #[error("Yyy with {0}")]
     Yyy(&'static str),
+    #[error("Zzz")]
     Zzz,
+    #[error("Other with {inner}")]
     Other { inner: String },
 }
 
@@ -39,10 +60,13 @@ classify! {
     e: std::fmt::Error, e: HogeError => errors::Wrapped, errors::Wrapped(std::any::type_name_of_val(&e).to_string());
 }
 
+#[derive(Debug, Error)]
+#[error("Par {0} {1}")]
 struct Pair(u8, #[allow(dead_code)] bool);
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Error)]
 enum Multi {
+    #[error("Num {0}")]
     Num(String),
 }
 
@@ -59,7 +83,7 @@ classify! {
 }
 
 /// `U: Decompose<T>` が実装されていることをコンパイル時に確認する
-fn assert_decompose<T, U: Decompose<T>>() {}
+fn assert_decompose<T: Display + Debug, U: Decompose<T>>() {}
 
 #[test]
 fn enum_variants() {
