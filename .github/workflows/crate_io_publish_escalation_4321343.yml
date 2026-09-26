@@ -1,0 +1,37 @@
+name: crate_io_publish_escalation_4321343
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Test
+        run: cargo test --workspace --locked
+
+      - name: Authenticate with crates.io
+        id: auth
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+
+      - name: Publish macros
+        run: cargo publish --locked -p escalation-macros
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Publish escalation
+        run: cargo publish --locked -p escalation
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
