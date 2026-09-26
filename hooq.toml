@@ -1,6 +1,6 @@
 [default]
 method = """.map_err(|mut e| {
-    use ::escalation::{IntoNewReport, ErrorInfo, Classify};
+    use ::escalation::{CreateNewReport, ErrorInfo, wrapping};
 
     let error_type_name = ::std::any::type_name_of_val(&e);
     let path = $path;
@@ -20,6 +20,6 @@ method = """.map_err(|mut e| {
         expr,
     };
 
-    e.into_new_report(info, $error)
+    e.create_new_report(info, wrapping!($error))
 })"""
-bindings = { tag = "\"no_tag\"", error = "None" }
+bindings = { tag = "\"no_tag\"", error = "_" }

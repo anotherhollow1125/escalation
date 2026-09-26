@@ -11,12 +11,12 @@ struct HogeError;
 classify! {
     anyhow::Error => HogeError;
     HogeError => FugaError;
-    FugaError => BarError;
+    FugaError => BarError::Other;
 }
 
 #[hooq]
 fn hoge(n: usize) -> Result<(), Report<HogeError>> {
-    if n == 4 {
+    if n.is_multiple_of(4) {
         return Err(anyhow!("hoge error"));
     }
 
@@ -28,6 +28,7 @@ fn hoge(n: usize) -> Result<(), Report<HogeError>> {
 struct FugaError;
 
 #[hooq]
+#[hooq::error = FugaError]
 fn fuga(n: usize) -> Result<(), Report<FugaError>> {
     hoge(n)?;
 
@@ -35,12 +36,21 @@ fn fuga(n: usize) -> Result<(), Report<FugaError>> {
 }
 
 #[derive(Debug, Error)]
-#[error("BarError")]
-struct BarError;
+enum BarError {
+    #[error("just 4")]
+    JustFour,
+    #[error("other")]
+    Other,
+}
 
 #[hooq]
 fn bar(n: usize) -> Result<(), Report<BarError>> {
-    fuga(n)?;
+    if n == 4 {
+        #[hooq::error = BarError::JustFour]
+        fuga(n)?;
+    } else {
+        fuga(n)?;
+    }
 
     Ok(())
 }

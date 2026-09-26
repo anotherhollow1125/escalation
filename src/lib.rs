@@ -3,6 +3,16 @@ use std::{any::type_name, panic::Location};
 pub use escalation_macros::classify;
 use thiserror::Error;
 
+#[macro_export]
+macro_rules! wrapping {
+    (_) => {
+        None
+    };
+    ($val:expr) => {
+        Some($val)
+    };
+}
+
 #[derive(Error, Debug, Clone, Copy)]
 #[error("{path}:{fn_name}:{line}:{col}")]
 pub struct ErrorInfo {
@@ -42,15 +52,15 @@ impl<E> Report<E> {
     }
 }
 
-pub trait IntoNewReport<E> {
-    fn into_new_report(&self, location: ErrorInfo, specified: Option<E>) -> Report<E>;
+pub trait CreateNewReport<E> {
+    fn create_new_report(&self, location: ErrorInfo, specified: Option<E>) -> Report<E>;
 }
 
-impl<T, U> IntoNewReport<U> for T
+impl<T, U> CreateNewReport<U> for T
 where
     U: Classify<T>,
 {
-    fn into_new_report(&self, location: ErrorInfo, specified: Option<U>) -> Report<U> {
+    fn create_new_report(&self, location: ErrorInfo, specified: Option<U>) -> Report<U> {
         let (mut trace, default) = U::classify(self);
         trace.push(location);
 
