@@ -61,26 +61,27 @@ classify! {
 #[test]
 fn enum_variants() {
     assert_eq!(
-        <LogicalError as Classify<HogeError>>::classify(&HogeError).1,
+        <LogicalError as Classify<HogeError>>::classify(&HogeError).2,
         LogicalError::Xxx
     );
     assert_eq!(
-        <LogicalError as Classify<FugaError>>::classify(&FugaError).1,
+        <LogicalError as Classify<FugaError>>::classify(&FugaError).2,
         LogicalError::Yyy("Yyy occurred")
     );
     assert_eq!(
-        <LogicalError as Classify<BarError>>::classify(&BarError).1,
+        <LogicalError as Classify<BarError>>::classify(&BarError).2,
         LogicalError::Yyy("Yyy occurred")
     );
     assert_eq!(
-        <LogicalError as Classify<BazError>>::classify(&BazError).1,
+        <LogicalError as Classify<BazError>>::classify(&BazError).2,
         LogicalError::Zzz
     );
 
-    let (trace, e) = <LogicalError as Classify<HasFieldError>>::classify(&HasFieldError {
+    let (cause, trace, e) = <LogicalError as Classify<HasFieldError>>::classify(&HasFieldError {
         inner: 42,
         other: true,
     });
+    assert!(cause.is_none());
     assert!(trace.is_empty());
     assert_eq!(
         e,
@@ -94,11 +95,11 @@ fn enum_variants() {
 fn explicit_target_and_binding_pattern() {
     let io = std::io::Error::other("x");
     assert_eq!(
-        <errors::UnitError as Classify<std::io::Error>>::classify(&io).1,
+        <errors::UnitError as Classify<std::io::Error>>::classify(&io).2,
         errors::UnitError
     );
     assert_eq!(
-        <errors::Wrapped as Classify<HogeError>>::classify(&HogeError).1,
+        <errors::Wrapped as Classify<HogeError>>::classify(&HogeError).2,
         errors::Wrapped("classify_macro::HogeError".to_string())
     );
 }
@@ -106,7 +107,7 @@ fn explicit_target_and_binding_pattern() {
 #[test]
 fn single_segment_struct() {
     assert_eq!(
-        <Plain as Classify<BazError>>::classify(&BazError).1,
+        <Plain as Classify<BazError>>::classify(&BazError).2,
         Plain(1)
     );
 }
@@ -118,11 +119,11 @@ fn different_patterns_per_source() {
             inner: 7,
             other: false,
         })
-        .1,
+        .2,
         Multi::Num("7".to_string())
     );
     assert_eq!(
-        <Multi as Classify<Pair>>::classify(&Pair(3, true)).1,
+        <Multi as Classify<Pair>>::classify(&Pair(3, true)).2,
         Multi::Num("3".to_string())
     );
 }

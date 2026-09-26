@@ -22,8 +22,8 @@ fn main() {
 
     match res.handle() {
         Ok(()) => println!("Ok"),
-        Err((e, report)) => {
-            eprintln!("Error: {e}\ntrace:");
+        Err((e, cause, report)) => {
+            eprintln!("Error: {e}\nCause: {cause:?}\nTrace:");
 
             for error_info in report.into_iter().rev() {
                 eprintln!("[{error_info}] {}", error_info.expr);

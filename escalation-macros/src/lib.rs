@@ -189,10 +189,11 @@ impl Rule {
                 quote! {
                     impl ::escalation::Classify<#ty> for #target {
                         fn classify(#pat: &#ty) -> (
+                            Option<::escalation::ErrorCause>,
                             ::std::vec::Vec<::escalation::ErrorInfo>,
                             #target,
                         ) {
-                            (::std::vec::Vec::new(), #value)
+                            (None, ::std::vec::Vec::new(), #value)
                         }
                     }
                 }

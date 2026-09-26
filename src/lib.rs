@@ -1,4 +1,8 @@
-use std::{any::type_name, panic::Location};
+use std::{
+    any::type_name,
+    fmt::{Debug, Display},
+    panic::Location,
+};
 
 pub use escalation_macros::classify;
 use thiserror::Error;
@@ -25,30 +29,51 @@ pub struct ErrorInfo {
     pub tag: &'static str,
 }
 
+#[derive(Debug, Clone)]
+pub struct ErrorCause {
+    pub display: String,
+    pub debug: String,
+    pub error_type_name: &'static str,
+}
+
 pub trait Classify<T> {
-    fn classify(error: &T) -> (Vec<ErrorInfo>, Self);
+    fn classify(error: &T) -> (Option<ErrorCause>, Vec<ErrorInfo>, Self);
 }
 
 impl<T, U> Classify<Report<T>> for U
 where
     U: Classify<T>,
 {
-    fn classify(error: &Report<T>) -> (Vec<ErrorInfo>, Self) {
-        let (_, s) = Self::classify(&error.inner);
+    fn classify(report: &Report<T>) -> (Option<ErrorCause>, Vec<ErrorInfo>, Self) {
+        let (_, _, s) = Self::classify(&report.inner);
 
-        (error.trace.clone(), s)
+        (Some(report.cause.clone()), report.trace.clone(), s)
     }
 }
 
 #[derive(Debug)]
 pub struct Report<E> {
     inner: E,
+    cause: ErrorCause,
     trace: Vec<ErrorInfo>,
 }
 
 impl<E> Report<E> {
-    pub fn handle(self) -> (E, Vec<ErrorInfo>) {
-        (self.inner, self.trace)
+    pub fn handle(self) -> (E, ErrorCause, Vec<ErrorInfo>) {
+        (self.inner, self.cause, self.trace)
+    }
+}
+
+impl<E> Display for Report<E>
+where
+    E: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Report {{ inner: \"{:?}\", cause: \"{:?}\"}}",
+            self.inner, self.cause
+        )
     }
 }
 
@@ -59,7 +84,7 @@ pub trait Handleable {
 }
 
 impl<T, E> Handleable for Result<T, Report<E>> {
-    type ConvertedType = Result<T, (E, Vec<ErrorInfo>)>;
+    type ConvertedType = Result<T, (E, ErrorCause, Vec<ErrorInfo>)>;
 
     fn handle(self) -> Self::ConvertedType {
         match self {
@@ -78,14 +103,22 @@ pub trait CreateNewReport<E> {
 
 impl<T, U> CreateNewReport<U> for T
 where
+    T: Display + Debug,
     U: Classify<T>,
 {
     fn create_new_report(&self, location: ErrorInfo, specified: Option<U>) -> Report<U> {
-        let (mut trace, default) = U::classify(self);
+        let (cause, mut trace, default) = U::classify(self);
+        let cause = cause.unwrap_or_else(|| ErrorCause {
+            display: self.to_string(),
+            debug: format!("{self:?}"),
+            error_type_name: type_name::<T>(),
+        });
+
         trace.push(location);
 
         Report {
             inner: specified.unwrap_or(default),
+            cause,
             trace,
         }
     }
@@ -97,13 +130,23 @@ pub trait IntoReport: Sized {
     fn into_report_with_error_info(self, error_info: ErrorInfo) -> Report<Self>;
 }
 
-impl<E> IntoReport for E {
+impl<E> IntoReport for E
+where
+    E: Display + Debug,
+{
     #[track_caller]
     fn into_report(self) -> Report<Self> {
         let location = Location::caller();
 
+        let cause = ErrorCause {
+            display: self.to_string(),
+            debug: format!("{self:?}"),
+            error_type_name: type_name::<E>(),
+        };
+
         Report {
             inner: self,
+            cause,
             trace: vec![ErrorInfo {
                 error_type_name: type_name::<E>(),
                 path: location.file(),
@@ -117,8 +160,15 @@ impl<E> IntoReport for E {
     }
 
     fn into_report_with_error_info(self, error_info: ErrorInfo) -> Report<Self> {
+        let cause = ErrorCause {
+            display: self.to_string(),
+            debug: format!("{self:?}"),
+            error_type_name: type_name::<E>(),
+        };
+
         Report {
             inner: self,
+            cause,
             trace: vec![error_info],
         }
     }
