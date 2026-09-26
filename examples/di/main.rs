@@ -1,5 +1,4 @@
 use clap::Parser;
-use escalation::Handleable;
 use std::sync::Arc;
 
 use crate::feature::{port::FeatureRepository, usecase::Usecase, usecase::impls::UsecaseImpl};
@@ -10,23 +9,25 @@ mod feature;
 #[derive(Debug, Parser)]
 struct Cli {
     n: String,
+    #[arg(short = 'j', long)]
+    as_json: bool,
 }
 
 fn main() {
-    let Cli { n } = Cli::parse();
+    let Cli { n, as_json } = Cli::parse();
 
     let repository: Arc<dyn FeatureRepository> = Arc::new(db::Db);
     let usecase = UsecaseImpl { repository };
 
     let res = usecase.usecase(n);
 
-    match res.handle() {
+    match res {
         Ok(()) => println!("Ok"),
-        Err((e, cause, report)) => {
-            eprintln!("Error: {e}\nCause: {cause:?}\nTrace:");
-
-            for error_info in report.into_iter().rev() {
-                eprintln!("[{error_info}] {}", error_info.expr);
+        Err(r) => {
+            if as_json {
+                eprintln!("{}", r.into_json());
+            } else {
+                eprintln!("{r}");
             }
         }
     }

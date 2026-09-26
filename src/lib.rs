@@ -7,6 +7,9 @@ use std::{
 pub use escalation_macros::{Classify, classify};
 use thiserror::Error;
 
+#[cfg(feature = "json")]
+use serde::Serialize;
+
 #[macro_export]
 macro_rules! wrapping {
     (_) => {
@@ -18,6 +21,7 @@ macro_rules! wrapping {
 }
 
 #[derive(Error, Debug, Clone, Copy)]
+#[cfg_attr(feature = "json", derive(Serialize))]
 #[error("{path}:{fn_name}:{line}:{col}")]
 pub struct ErrorInfo {
     pub error_type_name: &'static str,
@@ -30,6 +34,7 @@ pub struct ErrorInfo {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "json", derive(Serialize))]
 pub struct ErrorCause {
     pub display: String,
     pub debug: String,
@@ -77,18 +82,56 @@ impl<E> Report<E> {
     pub fn handle(self) -> (E, ErrorCause, Vec<ErrorInfo>) {
         (self.inner, self.cause, self.trace)
     }
+
+    pub fn summarize(&self) -> String
+    where
+        E: Display,
+    {
+        let Report {
+            inner,
+            cause,
+            trace,
+        } = self;
+
+        let trace = trace
+            .iter()
+            .rev()
+            .map(|e| format!("[{}]\t{}", e, e.expr))
+            .collect::<Vec<_>>()
+            .join("\n| \t");
+
+        format!(
+            "Error: {inner}
+Cause: {}
+Trace:
+| ==== surface ====
+| \t{}
+| ==== root =======",
+            cause.display, trace
+        )
+    }
+
+    #[cfg(feature = "json")]
+    pub fn into_json(&self) -> serde_json::Value
+    where
+        E: Display,
+    {
+        serde_json::json! {
+            {
+                "inner": self.inner.to_string(),
+                "cause": self.cause,
+                "trace": self.trace
+            }
+        }
+    }
 }
 
 impl<E> Display for Report<E>
 where
-    E: Debug,
+    E: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Report {{ inner: \"{:?}\", cause: \"{:?}\"}}",
-            self.inner, self.cause
-        )
+        write!(f, "{}", self.summarize())
     }
 }
 
@@ -123,7 +166,7 @@ where
 
 impl<T, U> Decompose<Report<T>> for U
 where
-    T: Debug,
+    T: Display + Debug,
     U: Classify<T>,
 {
     fn decompose(report: Report<T>) -> Decomposed<U> {

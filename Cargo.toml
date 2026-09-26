@@ -6,8 +6,14 @@ edition = "2024"
 [workspace]
 members = ["escalation-macros"]
 
+[features]
+default = ["json"]
+json = ["dep:serde", "dep:serde_json"]
+
 [dependencies]
 escalation-macros = { path = "escalation-macros" }
+serde = { version = "1.0.229", features = ["derive"], optional = true }
+serde_json = { version = "1.0.151", optional = true }
 thiserror = "2.0.21"
 
 [dev-dependencies]
