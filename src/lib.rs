@@ -7,7 +7,7 @@ use std::{
 pub use escalation_macros::{Classify, classify};
 use thiserror::Error;
 
-#[cfg(feature = "json")]
+#[cfg(feature = "serde")]
 use serde::Serialize;
 
 #[doc(hidden)]
@@ -22,7 +22,7 @@ macro_rules! wrapping {
 }
 
 #[derive(Error, Debug, Clone, Copy)]
-#[cfg_attr(feature = "json", derive(Serialize))]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 #[error("{path}:{fn_name}:{line}:{col}")]
 pub struct ErrorInfo {
     pub error_type_name: &'static str,
@@ -35,7 +35,7 @@ pub struct ErrorInfo {
 }
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "json", derive(Serialize))]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 pub struct ErrorCause {
     pub display: String,
     pub debug: String,
@@ -112,20 +112,6 @@ Trace:
             cause.display, trace
         )
     }
-
-    #[cfg(feature = "json")]
-    pub fn to_json_value(&self) -> serde_json::Value
-    where
-        E: Display,
-    {
-        serde_json::json! {
-            {
-                "inner": self.inner.to_string(),
-                "cause": self.cause,
-                "trace": self.trace
-            }
-        }
-    }
 }
 
 impl<E> Display for Report<E>
@@ -134,6 +120,25 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.summarize())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<E> serde::Serialize for Report<E>
+where
+    E: Display,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+
+        let mut s = serializer.serialize_struct("Report", 3)?;
+        s.serialize_field("inner", &self.inner.to_string())?;
+        s.serialize_field("cause", &self.cause)?;
+        s.serialize_field("trace", &self.trace)?;
+        s.end()
     }
 }
 

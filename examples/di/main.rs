@@ -25,7 +25,7 @@ fn main() {
         Ok(()) => println!("Ok"),
         Err(r) => {
             if as_json {
-                eprintln!("{}", r.to_json_value());
+                eprintln!("{}", serde_json::to_value(r).unwrap());
             } else {
                 eprintln!("{r}");
             }
