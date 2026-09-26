@@ -1,10 +1,10 @@
 use anyhow::anyhow;
 use clap::Parser;
-use escalation::{Report, classify};
+use escalation::{Classify, Report, Unclassified, classify};
 use hooq::hooq;
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Classify)]
 #[error("HogeError")]
 struct HogeError;
 
@@ -23,7 +23,7 @@ fn hoge(n: usize) -> Result<(), Report<HogeError>> {
     Ok(())
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Classify)]
 #[error("FugaError")]
 struct FugaError;
 
@@ -35,7 +35,8 @@ fn fuga(n: usize) -> Result<(), Report<FugaError>> {
     Ok(())
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Classify)]
+#[classify(Unclassified => Self::Other)]
 enum BarError {
     #[error("just 4")]
     JustFour,
@@ -50,6 +51,10 @@ fn bar(n: usize) -> Result<(), Report<BarError>> {
         fuga(n)?;
     } else {
         fuga(n)?;
+    }
+
+    if n > 1000 {
+        return Err(anyhow::anyhow!("Unclassified")).map_err(Unclassified::from);
     }
 
     Ok(())

@@ -4,7 +4,7 @@ use std::{
     panic::Location,
 };
 
-pub use escalation_macros::classify;
+pub use escalation_macros::{Classify, classify};
 use thiserror::Error;
 
 #[macro_export]
@@ -138,6 +138,27 @@ where
             trace,
             classified: U::classify(inner),
         }
+    }
+}
+
+/// deriveマクロ `Classify` でこの構造体の Classify<Unclassified> を生成できるようになっている
+pub struct Unclassified<E>(pub E);
+
+impl<E: Display> Display for Unclassified<E> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl<E: Debug> Debug for Unclassified<E> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl<E> From<E> for Unclassified<E> {
+    fn from(value: E) -> Self {
+        Self(value)
     }
 }
 
