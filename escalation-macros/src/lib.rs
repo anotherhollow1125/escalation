@@ -24,6 +24,18 @@ mod derive_classify;
 ///   - `Struct` / `Struct(..)` / `Struct { .. }` (セグメントが 1 つ) → `Struct`
 /// - `型, 式`: 変換先の型を明示します
 ///
+/// # `match` 形式
+///
+/// `match 変換元の型 => 変換先の型 { アーム, .. }` と書くと、変換元の値に対する `match` 式を
+/// そのまま `classify` の本体にします。この形式の後の `;` は省略できます。
+///
+/// 型の代わりに `列挙体::*` と書くと、アームに `列挙体::` を補います。
+///
+/// - 変換元が `Src::*`: パターン中のバリアント (`A` / `A(..)` / `A { .. }` / `A | B`) を `Src::A` などにします。
+///   `_`、`x @ ..` の束縛部分、`ref x` / `mut x`、リテラルなどはそのままです
+/// - 変換先が `Dst::*`: アームの式 (`A` / `A(..)` / `A { .. }` のみ) を `Dst::A` などにします。
+///   それ以外の式を書きたい場合は変換先を `Dst` (型) と書いてください
+///
 /// # 例
 ///
 /// ```ignore
@@ -32,11 +44,24 @@ mod derive_classify;
 ///     FugaError, BarError => LogicalError::Yyy("Yyy occurred");
 ///     BazError => LogicalError, LogicalError::Zzz;
 ///     HasFieldError { inner, .. }: HasFieldError => LogicalError::Other { inner: inner.to_string() };
+///
+///     match SomeError::* => ConvertedError::* {
+///         A => AA,
+///         B(s) => BB(s),
+///     }
+///
+///     match SomeError::* => OtherError {
+///         A => OtherError("a".to_string()),
+///         B(s) => OtherError(s),
+///     }
 /// }
 /// ```
 #[proc_macro]
 pub fn classify(input: TokenStream) -> TokenStream {
-    parse_macro_input!(input as classify::Rules).expand().into()
+    parse_macro_input!(input as classify::Rules)
+        .expand()
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
 }
 
 /// 自分自身と `Unclassified<E>` からの `Classify` / `Decompose` を実装する derive マクロ

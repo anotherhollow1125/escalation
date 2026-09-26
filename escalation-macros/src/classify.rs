@@ -1,25 +1,56 @@
 //! 関数風マクロ `classify!` の実装
 
+mod match_rule;
+
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::parse::{Parse, ParseStream};
-use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::{Expr, Pat, Path, Token, Type};
 
-pub(crate) struct Rules(Vec<Rule>);
+use self::match_rule::MatchRule;
+
+pub(crate) struct Rules(Vec<Item>);
+
+enum Item {
+    /// `変換元 => 変換先;`
+    Rule(Box<Rule>),
+    /// `match 変換元 => 変換先 { .. }`
+    Match(MatchRule),
+}
 
 impl Parse for Rules {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let rules = Punctuated::<Rule, Token![;]>::parse_terminated(input)?;
+        let mut items = Vec::new();
 
-        Ok(Rules(rules.into_iter().collect()))
+        while !input.is_empty() {
+            if input.peek(Token![match]) {
+                items.push(Item::Match(input.parse()?));
+                // `match` ブロックの後の `;` は省略可
+                input.parse::<Option<Token![;]>>()?;
+                continue;
+            }
+
+            items.push(Item::Rule(input.parse()?));
+            if input.is_empty() {
+                break;
+            }
+            input.parse::<Token![;]>()?;
+        }
+
+        Ok(Rules(items))
     }
 }
 
 impl Rules {
-    pub(crate) fn expand(&self) -> TokenStream2 {
-        self.0.iter().map(Rule::expand).collect()
+    pub(crate) fn expand(&self) -> syn::Result<TokenStream2> {
+        self.0
+            .iter()
+            .map(|item| match item {
+                Item::Rule(rule) => Ok(rule.expand()),
+                Item::Match(rule) => rule.expand(),
+            })
+            .collect()
     }
 }
 
