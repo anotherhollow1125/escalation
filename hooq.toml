@@ -1,4 +1,4 @@
-[default]
+[progress]
 method = """.map_err(|mut e| {
     use ::escalation::{CreateNewReport, ErrorInfo, wrapping};
 
@@ -23,3 +23,29 @@ method = """.map_err(|mut e| {
     e.create_new_report(info, wrapping!($error))
 })"""
 bindings = { tag = "\"no_tag\"", error = "_" }
+
+[seed]
+method = """.map_err(|e| {
+    use ::escalation::{IntoReport, ErrorInfo};
+
+    let error_type_name = ::std::any::type_name_of_val(&e);
+    let path = $path;
+    let fn_name = $fn_name;
+    let line = $line as u32;
+    let col = $col as u32;
+    let expr = ::hooq::source_excerpt_helpers::one_line_stringify!($source);
+    let tag = $tag;
+
+    let info = ErrorInfo {
+        error_type_name,
+        path,
+        fn_name,
+        line,
+        col,
+        tag,
+        expr,
+    };
+
+    e.into_report_with_error_info(info)
+})"""
+bindings = { tag = "\"no_tag\"" }

@@ -14,7 +14,7 @@ classify! {
     FugaError => BarError::Other;
 }
 
-#[hooq]
+#[hooq(progress)]
 fn hoge(n: usize) -> Result<(), Report<HogeError>> {
     if n.is_multiple_of(4) {
         return Err(anyhow!("hoge error"));
@@ -27,7 +27,7 @@ fn hoge(n: usize) -> Result<(), Report<HogeError>> {
 #[error("FugaError")]
 struct FugaError;
 
-#[hooq]
+#[hooq(progress)]
 #[hooq::error = FugaError]
 fn fuga(n: usize) -> Result<(), Report<FugaError>> {
     hoge(n)?;
@@ -43,7 +43,7 @@ enum BarError {
     Other,
 }
 
-#[hooq]
+#[hooq(progress)]
 fn bar(n: usize) -> Result<(), Report<BarError>> {
     if n == 4 {
         #[hooq::error = BarError::JustFour]
