@@ -1,4 +1,4 @@
-use escalation::{Classify, classify};
+use escalation::{Classify, Decompose, classify};
 
 struct HogeError;
 struct FugaError;
@@ -36,7 +36,7 @@ mod errors {
 // 1 セグメントの構造体・パス付きの変換元・束縛のみのパターン
 classify! {
     std::io::Error => errors::UnitError, errors::UnitError;
-    e: std::fmt::Error, e: HogeError => errors::Wrapped, errors::Wrapped(std::any::type_name_of_val(e).to_string());
+    e: std::fmt::Error, e: HogeError => errors::Wrapped, errors::Wrapped(std::any::type_name_of_val(&e).to_string());
 }
 
 struct Pair(u8, #[allow(dead_code)] bool);
@@ -58,33 +58,32 @@ classify! {
     BazError => Plain(1);
 }
 
+/// `U: Decompose<T>` が実装されていることをコンパイル時に確認する
+fn assert_decompose<T, U: Decompose<T>>() {}
+
 #[test]
 fn enum_variants() {
     assert_eq!(
-        <LogicalError as Classify<HogeError>>::classify(&HogeError).2,
+        <LogicalError as Classify<HogeError>>::classify(HogeError),
         LogicalError::Xxx
     );
     assert_eq!(
-        <LogicalError as Classify<FugaError>>::classify(&FugaError).2,
+        <LogicalError as Classify<FugaError>>::classify(FugaError),
         LogicalError::Yyy("Yyy occurred")
     );
     assert_eq!(
-        <LogicalError as Classify<BarError>>::classify(&BarError).2,
+        <LogicalError as Classify<BarError>>::classify(BarError),
         LogicalError::Yyy("Yyy occurred")
     );
     assert_eq!(
-        <LogicalError as Classify<BazError>>::classify(&BazError).2,
+        <LogicalError as Classify<BazError>>::classify(BazError),
         LogicalError::Zzz
     );
-
-    let (cause, trace, e) = <LogicalError as Classify<HasFieldError>>::classify(&HasFieldError {
-        inner: 42,
-        other: true,
-    });
-    assert!(cause.is_none());
-    assert!(trace.is_empty());
     assert_eq!(
-        e,
+        <LogicalError as Classify<HasFieldError>>::classify(HasFieldError {
+            inner: 42,
+            other: true,
+        }),
         LogicalError::Other {
             inner: "42".to_string()
         }
@@ -95,35 +94,46 @@ fn enum_variants() {
 fn explicit_target_and_binding_pattern() {
     let io = std::io::Error::other("x");
     assert_eq!(
-        <errors::UnitError as Classify<std::io::Error>>::classify(&io).2,
+        <errors::UnitError as Classify<std::io::Error>>::classify(io),
         errors::UnitError
     );
     assert_eq!(
-        <errors::Wrapped as Classify<HogeError>>::classify(&HogeError).2,
+        <errors::Wrapped as Classify<HogeError>>::classify(HogeError),
         errors::Wrapped("classify_macro::HogeError".to_string())
     );
 }
 
 #[test]
 fn single_segment_struct() {
-    assert_eq!(
-        <Plain as Classify<BazError>>::classify(&BazError).2,
-        Plain(1)
-    );
+    assert_eq!(<Plain as Classify<BazError>>::classify(BazError), Plain(1));
 }
 
 #[test]
 fn different_patterns_per_source() {
     assert_eq!(
-        <Multi as Classify<HasFieldError>>::classify(&HasFieldError {
+        <Multi as Classify<HasFieldError>>::classify(HasFieldError {
             inner: 7,
             other: false,
-        })
-        .2,
+        }),
         Multi::Num("7".to_string())
     );
     assert_eq!(
-        <Multi as Classify<Pair>>::classify(&Pair(3, true)).2,
+        <Multi as Classify<Pair>>::classify(Pair(3, true)),
         Multi::Num("3".to_string())
     );
+}
+
+#[test]
+fn decompose_is_implemented() {
+    assert_decompose::<HogeError, LogicalError>();
+    assert_decompose::<FugaError, LogicalError>();
+    assert_decompose::<BarError, LogicalError>();
+    assert_decompose::<BazError, LogicalError>();
+    assert_decompose::<HasFieldError, LogicalError>();
+    assert_decompose::<std::io::Error, errors::UnitError>();
+    assert_decompose::<std::fmt::Error, errors::Wrapped>();
+    assert_decompose::<HogeError, errors::Wrapped>();
+    assert_decompose::<HasFieldError, Multi>();
+    assert_decompose::<Pair, Multi>();
+    assert_decompose::<BazError, Plain>();
 }

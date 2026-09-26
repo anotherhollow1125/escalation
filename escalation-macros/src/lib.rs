@@ -188,14 +188,12 @@ impl Rule {
 
                 quote! {
                     impl ::escalation::Classify<#ty> for #target {
-                        fn classify(#pat: &#ty) -> (
-                            Option<::escalation::ErrorCause>,
-                            ::std::vec::Vec<::escalation::ErrorInfo>,
-                            #target,
-                        ) {
-                            (None, ::std::vec::Vec::new(), #value)
+                        fn classify(#pat: #ty) -> #target {
+                            #value
                         }
                     }
+
+                    impl ::escalation::Decompose<#ty> for #target {}
                 }
             })
             .collect()
