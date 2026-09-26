@@ -114,7 +114,7 @@ Trace:
     }
 
     #[cfg(feature = "json")]
-    pub fn into_json(&self) -> serde_json::Value
+    pub fn to_json_value(&self) -> serde_json::Value
     where
         E: Display,
     {

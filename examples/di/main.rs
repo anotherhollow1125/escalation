@@ -25,7 +25,7 @@ fn main() {
         Ok(()) => println!("Ok"),
         Err(r) => {
             if as_json {
-                eprintln!("{}", r.into_json());
+                eprintln!("{}", r.to_json_value());
             } else {
                 eprintln!("{r}");
             }
