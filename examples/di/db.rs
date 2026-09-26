@@ -1,11 +1,10 @@
-use std::{
-    collections::HashSet,
-    sync::{LazyLock, Mutex},
-};
+use std::collections::HashSet;
+use std::sync::{LazyLock, Mutex};
 
-use crate::feature::port::{CreateError, FeatureRepository, GetError};
 use escalation::{Report, classify};
 use hooq::hooq;
+
+use crate::feature::port::{CreateError, FeatureRepository, GetError};
 
 pub struct Db;
 

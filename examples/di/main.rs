@@ -1,7 +1,10 @@
-use clap::Parser;
 use std::sync::Arc;
 
-use crate::feature::{port::FeatureRepository, usecase::Usecase, usecase::impls::UsecaseImpl};
+use clap::Parser;
+
+use crate::feature::port::FeatureRepository;
+use crate::feature::usecase::Usecase;
+use crate::feature::usecase::impls::UsecaseImpl;
 
 mod db;
 mod feature;

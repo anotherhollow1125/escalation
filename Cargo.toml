@@ -2,6 +2,10 @@
 name = "escalation"
 version = "0.1.0"
 edition = "2024"
+description = "error utility crate that is used with hooq macro."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/anotherhollow1125/escalation"
+readme = "README.md"
 
 [workspace]
 members = ["escalation-macros"]
@@ -11,7 +15,10 @@ default = ["serde"]
 serde = ["dep:serde"]
 
 [dependencies]
-escalation-macros = { path = "escalation-macros" }
+escalation-macros = {
+    version = "0.1.0",
+    path = "escalation-macros"
+}
 serde = { version = "1.0.229", features = ["derive"], optional = true }
 thiserror = "2.0.21"
 

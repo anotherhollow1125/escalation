@@ -17,11 +17,13 @@ pub trait Usecase {
 }
 
 pub mod impls {
-    use super::{Usecase, UsecaseError};
-    use crate::feature::port::{CreateError, FeatureRepository, GetError};
+    use std::sync::Arc;
+
     use escalation::{Report, classify};
     use hooq::hooq;
-    use std::sync::Arc;
+
+    use super::{Usecase, UsecaseError};
+    use crate::feature::port::{CreateError, FeatureRepository, GetError};
 
     classify! {
         CreateError, GetError => UsecaseError::RepositoryError;

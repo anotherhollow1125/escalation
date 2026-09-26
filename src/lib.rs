@@ -1,14 +1,11 @@
-use std::{
-    any::type_name,
-    fmt::{Debug, Display},
-    panic::Location,
-};
+use std::any::type_name;
+use std::fmt::{Debug, Display};
+use std::panic::Location;
 
 pub use escalation_macros::{Classify, classify};
-use thiserror::Error;
-
 #[cfg(feature = "serde")]
 use serde::Serialize;
+use thiserror::Error;
 
 #[doc(hidden)]
 #[macro_export]
