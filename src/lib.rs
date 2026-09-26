@@ -37,17 +37,23 @@ pub struct ErrorCause {
 }
 
 pub trait Classify<T> {
-    fn classify(error: &T) -> (Option<ErrorCause>, Vec<ErrorInfo>, Self);
+    fn classify(error: T) -> Self;
 }
 
-impl<T, U> Classify<Report<T>> for U
-where
-    U: Classify<T>,
-{
-    fn classify(report: &Report<T>) -> (Option<ErrorCause>, Vec<ErrorInfo>, Self) {
-        let (_, _, s) = Self::classify(&report.inner);
+struct Decomposed<T> {
+    cause: Option<ErrorCause>,
+    trace: Vec<ErrorInfo>,
+    classified: T,
+}
 
-        (Some(report.cause.clone()), report.trace.clone(), s)
+pub trait Decompose<T>: Classify<T> + Sized {
+    #[allow(private_interfaces)]
+    fn decompose(error: T) -> Decomposed<Self> {
+        Decomposed {
+            cause: None,
+            trace: Vec::new(),
+            classified: Self::classify(error),
+        }
     }
 }
 
@@ -97,27 +103,61 @@ impl<T, E> Handleable for Result<T, Report<E>> {
     }
 }
 
+impl<T, U> Classify<Report<T>> for U
+where
+    U: Classify<T>,
+{
+    fn classify(report: Report<T>) -> Self {
+        Self::classify(report.inner)
+    }
+}
+
+impl<T, U> Decompose<Report<T>> for U
+where
+    U: Classify<T>,
+{
+    #[allow(private_interfaces)]
+    fn decompose(report: Report<T>) -> Decomposed<U> {
+        let Report {
+            inner,
+            cause,
+            trace,
+        } = report;
+
+        Decomposed {
+            cause: Some(cause),
+            trace,
+            classified: U::classify(inner),
+        }
+    }
+}
+
 pub trait Escalate<E> {
-    fn escalate(&self, location: ErrorInfo, specified: Option<E>) -> Report<E>;
+    fn escalate(self, location: ErrorInfo, specified: Option<E>) -> Report<E>;
 }
 
 impl<T, U> Escalate<U> for T
 where
     T: Display + Debug,
-    U: Classify<T>,
+    U: Decompose<T>,
 {
-    fn escalate(&self, location: ErrorInfo, specified: Option<U>) -> Report<U> {
-        let (cause, mut trace, default) = U::classify(self);
-        let cause = cause.unwrap_or_else(|| ErrorCause {
+    fn escalate(self, location: ErrorInfo, specified: Option<U>) -> Report<U> {
+        let default_cause = ErrorCause {
             display: self.to_string(),
             debug: format!("{self:?}"),
             error_type_name: type_name::<T>(),
-        });
+        };
+        let Decomposed {
+            cause,
+            mut trace,
+            classified,
+        } = U::decompose(self);
+        let cause = cause.unwrap_or(default_cause);
 
         trace.push(location);
 
         Report {
-            inner: specified.unwrap_or(default),
+            inner: specified.unwrap_or(classified),
             cause,
             trace,
         }
