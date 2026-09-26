@@ -52,6 +52,26 @@ impl<E> Report<E> {
     }
 }
 
+pub trait Handleable {
+    type ConvertedType;
+
+    fn handle(self) -> Self::ConvertedType;
+}
+
+impl<T, E> Handleable for Result<T, Report<E>> {
+    type ConvertedType = Result<T, (E, Vec<ErrorInfo>)>;
+
+    fn handle(self) -> Self::ConvertedType {
+        match self {
+            Ok(v) => Ok(v),
+            Err(r) => {
+                let tuple = r.handle();
+                Err(tuple)
+            }
+        }
+    }
+}
+
 pub trait CreateNewReport<E> {
     fn create_new_report(&self, location: ErrorInfo, specified: Option<E>) -> Report<E>;
 }
@@ -71,9 +91,10 @@ where
     }
 }
 
-/// hooq::skip する場合にReport化するためのメソッド
 pub trait IntoReport: Sized {
     fn into_report(self) -> Report<Self>;
+
+    fn into_report_with_error_info(self, error_info: ErrorInfo) -> Report<Self>;
 }
 
 impl<E> IntoReport for E {
@@ -92,6 +113,13 @@ impl<E> IntoReport for E {
                 expr: "<unknown>",
                 tag: "<unknown>",
             }],
+        }
+    }
+
+    fn into_report_with_error_info(self, error_info: ErrorInfo) -> Report<Self> {
+        Report {
+            inner: self,
+            trace: vec![error_info],
         }
     }
 }
