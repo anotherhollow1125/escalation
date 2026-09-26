@@ -10,6 +10,7 @@ use thiserror::Error;
 #[cfg(feature = "json")]
 use serde::Serialize;
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! wrapping {
     (_) => {
@@ -52,6 +53,7 @@ pub struct Decomposed<T> {
     classified: T,
 }
 
+#[doc(hidden)]
 pub trait Decompose<T>: Classify<T> + Sized
 where
     T: Display + Debug,
