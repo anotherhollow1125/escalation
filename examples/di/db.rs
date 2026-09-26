@@ -48,7 +48,7 @@ fn connect_db(flag: bool) -> Result<&'static Mutex<Connection>, Report<&'static 
     Ok(&CONNECTION)
 }
 
-#[hooq(progress)]
+#[hooq(escalate)]
 impl FeatureRepository for Db {
     fn get_user(&self, id: usize) -> Result<Option<usize>, Report<GetError>> {
         if id > 10000000000 {

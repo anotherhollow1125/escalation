@@ -33,7 +33,7 @@ pub mod impls {
     }
 
     impl Usecase for UsecaseImpl {
-        #[hooq(progress)]
+        #[hooq(escalate)]
         fn usecase(&self, s: String) -> Result<(), Report<UsecaseError>> {
             #[hooq::error = UsecaseError::InvalidInput(s)]
             let n = s.clone().parse::<usize>()?;

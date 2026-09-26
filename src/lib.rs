@@ -97,16 +97,16 @@ impl<T, E> Handleable for Result<T, Report<E>> {
     }
 }
 
-pub trait CreateNewReport<E> {
-    fn create_new_report(&self, location: ErrorInfo, specified: Option<E>) -> Report<E>;
+pub trait Escalate<E> {
+    fn escalate(&self, location: ErrorInfo, specified: Option<E>) -> Report<E>;
 }
 
-impl<T, U> CreateNewReport<U> for T
+impl<T, U> Escalate<U> for T
 where
     T: Display + Debug,
     U: Classify<T>,
 {
-    fn create_new_report(&self, location: ErrorInfo, specified: Option<U>) -> Report<U> {
+    fn escalate(&self, location: ErrorInfo, specified: Option<U>) -> Report<U> {
         let (cause, mut trace, default) = U::classify(self);
         let cause = cause.unwrap_or_else(|| ErrorCause {
             display: self.to_string(),
