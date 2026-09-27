@@ -66,28 +66,63 @@ pub fn classify(input: TokenStream) -> TokenStream {
         .into()
 }
 
-/// 自分自身と `Unclassified<E>` からの `Classify` / `Decompose` を実装する derive マクロ
+/// 導出対象の型への `Classify` / `Decompose` を実装する derive マクロ
 ///
-/// - `impl Classify<Self> for Self` (と `Decompose<Self>`) は常に生成します
-/// - `#[classify(Unclassified as 式)]` がある場合、任意の `E` について
-///   `impl Classify<Unclassified<E>> for Self` (と `Decompose<Unclassified<E>>`) を生成し、式の値を返します。
-///   式の中では `Self` が使えます
+/// どの指定から生成される impl も、`Classify` と `Decompose` の両方です。
+/// `Decompose` は `Display + Debug` を要求するため、変換元の型はそれらを実装している必要があります。
 ///
-/// `Decompose` は `Display + Debug` を要求するため、導出対象の型はそれらを実装している必要があります。
+/// # 自分自身から
+///
+/// `impl Classify<Self> for Self` は常に生成します。
+///
+/// # 型の外側: `#[classify(変換元 as 式)]`
+///
+/// `classify!` の `変換元 as 変換先` と同じです。変換先は常に導出対象の型なので、`as` の後ろには式だけを書きます
+/// (式の中では `Self` が使えます)。変換元の書き方 (`A, B` / `パターン: A` / `束縛名 @ A`) も `classify!` と同じで、
+/// `;` 区切りで複数のルールを書けます。属性を複数付けても構いません。
+///
+/// `#[classify(Unclassified as 式)]` だけは特別で、任意の `E` について `Classify<Unclassified<E>>` を生成します。
+///
+/// # フィールド: `#[classify]`
+///
+/// thiserror の `#[from]` と同じ発想で、フィールドの型からそのフィールドを持つ値を作ります。
+/// フィールドは 1 つだけのものに限ります (他のフィールドを埋められないため)。
+/// 型引数そのもの (`Variant(#[classify] E)`) には付けられません (`Classify<Report<T>>` の汎用実装と衝突します)。
+///
+/// # バリアント: `#[typ(型, ..)]` (= `#[classify(typ(型, ..))]`)
+///
+/// 列挙された型をそのバリアントに分類します。ユニットバリアントにのみ付けられます。
+///
+/// # バリアント: `#[variant(列挙体::バリアント, ..)]` (= `#[classify(variant(..))]`)
+///
+/// 分類前の列挙体のバリアントをそのバリアントに分類します。ユニットバリアントにのみ付けられます。
+/// `::` より前の部分が同じものは同じ分類前の列挙体とみなし、1 つの `match` 式にまとめます。
+///
+/// - `列挙体::X` / `列挙体::X(..)` / `列挙体::X { .. }` などのパターンが書けます
+/// - `列挙体::_` は残り全部を表し、書いた位置に関わらず最後のアームになります
+/// - 網羅されていない場合は通常の `match` と同じくコンパイルエラーになります
 ///
 /// # 例
 ///
 /// ```ignore
 /// #[derive(Debug, thiserror::Error, Classify)]
+/// #[classify(SomeError as Self::Other)]
 /// #[classify(Unclassified as Self::Internal)]
-/// pub enum SomeError {
-///     #[error("xxx")]
-///     Xxx,
+/// pub enum HereError {
+///     #[error("xxxxx")]
+///     #[typ(OtherError, ElseError)]
+///     #[variant(HogeError::X, FugaError::Xxx)]
+///     Xxxxx,
+///     #[error("other")]
+///     #[variant(HogeError::Y, FugaError::_)]
+///     Other,
+///     #[error("wrapped: {0}")]
+///     Wrapped(#[classify] WrappedError),
 ///     #[error("internal")]
 ///     Internal,
 /// }
 /// ```
-#[proc_macro_derive(Classify, attributes(classify))]
+#[proc_macro_derive(Classify, attributes(classify, typ, variant))]
 pub fn derive_classify(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 

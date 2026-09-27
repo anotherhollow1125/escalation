@@ -61,9 +61,9 @@ struct Rule {
 }
 
 /// `パターン: 型`、`束縛名 @ 型` または `型`
-struct Source {
-    pat: Option<Pat>,
-    ty: Type,
+pub(crate) struct Source {
+    pub(crate) pat: Option<Pat>,
+    pub(crate) ty: Type,
 }
 
 impl Parse for Rule {
@@ -125,7 +125,7 @@ fn parse_pattern(input: ParseStream) -> syn::Result<Option<Pat>> {
 }
 
 /// `as` の直前までのカンマ区切りの変換元を読む
-fn parse_sources(input: ParseStream) -> syn::Result<Vec<Source>> {
+pub(crate) fn parse_sources(input: ParseStream) -> syn::Result<Vec<Source>> {
     let mut sources = vec![input.parse::<Source>()?];
 
     while input.parse::<Option<Token![,]>>()?.is_some() {
