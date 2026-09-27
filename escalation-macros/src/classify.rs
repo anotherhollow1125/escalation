@@ -13,9 +13,9 @@ use self::match_rule::MatchRule;
 pub(crate) struct Rules(Vec<Item>);
 
 enum Item {
-    /// `変換元 => 変換先;`
+    /// `変換元 as 変換先;`
     Rule(Box<Rule>),
-    /// `match 変換元 => 変換先 { .. }`
+    /// `match 変換元 as 変換先 { .. }`
     Match(MatchRule),
 }
 
@@ -69,7 +69,7 @@ struct Source {
 impl Parse for Rule {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let sources = parse_sources(input)?;
-        input.parse::<Token![=>]>()?;
+        input.parse::<Token![as]>()?;
         let (target, value) = parse_target(input)?;
 
         Ok(Rule {
@@ -105,7 +105,7 @@ fn parse_pattern(input: ParseStream) -> syn::Result<Option<Pat>> {
     Ok(Some(pat))
 }
 
-/// `=>` の直前までのカンマ区切りの変換元を読む
+/// `as` の直前までのカンマ区切りの変換元を読む
 fn parse_sources(input: ParseStream) -> syn::Result<Vec<Source>> {
     let mut sources = vec![input.parse::<Source>()?];
 

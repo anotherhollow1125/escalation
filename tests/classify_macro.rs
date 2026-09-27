@@ -40,10 +40,10 @@ enum LogicalError {
 }
 
 classify! {
-    HogeError => LogicalError::Xxx;
-    FugaError, BarError => LogicalError::Yyy("Yyy occurred");
-    BazError => LogicalError, LogicalError::Zzz;
-    HasFieldError { inner, .. }: HasFieldError => LogicalError::Other { inner: inner.to_string() }
+    HogeError as LogicalError::Xxx;
+    FugaError, BarError as LogicalError::Yyy("Yyy occurred");
+    BazError as LogicalError, LogicalError::Zzz;
+    HasFieldError { inner, .. }: HasFieldError as LogicalError::Other { inner: inner.to_string() }
 }
 
 mod errors {
@@ -56,8 +56,8 @@ mod errors {
 
 // 1 セグメントの構造体・パス付きの変換元・束縛のみのパターン
 classify! {
-    std::io::Error => errors::UnitError, errors::UnitError;
-    e: std::fmt::Error, e: HogeError => errors::Wrapped, errors::Wrapped(std::any::type_name_of_val(&e).to_string());
+    std::io::Error as errors::UnitError, errors::UnitError;
+    e: std::fmt::Error, e: HogeError as errors::Wrapped, errors::Wrapped(std::any::type_name_of_val(&e).to_string());
 }
 
 #[derive(Debug, Error)]
@@ -72,14 +72,14 @@ enum Multi {
 
 // 変換元ごとに異なるパターン
 classify! {
-    HasFieldError { inner, .. }: HasFieldError, Pair(inner, _): Pair => Multi::Num(inner.to_string());
+    HasFieldError { inner, .. }: HasFieldError, Pair(inner, _): Pair as Multi::Num(inner.to_string());
 }
 
 #[derive(Debug, PartialEq)]
 struct Plain(u8);
 
 classify! {
-    BazError => Plain(1);
+    BazError as Plain(1);
 }
 
 /// `U: Decompose<T>` が実装されていることをコンパイル時に確認する

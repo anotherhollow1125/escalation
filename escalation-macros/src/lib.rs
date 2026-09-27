@@ -6,7 +6,7 @@ mod derive_classify;
 
 /// `Classify` 実装のボイラープレートを生成するマクロ
 ///
-/// 各ルールは `変換元 => 変換先;` の形で、`;` 区切りで複数書けます (最後の `;` は省略可)。
+/// 各ルールは `変換元 as 変換先;` の形で、`;` 区切りで複数書けます (最後の `;` は省略可)。
 ///
 /// # 変換元
 ///
@@ -26,7 +26,7 @@ mod derive_classify;
 ///
 /// # `match` 形式
 ///
-/// `match 変換元の型 => 変換先の型 { アーム, .. }` と書くと、変換元の値に対する `match` 式を
+/// `match 変換元の型 as 変換先の型 { アーム, .. }` と書くと、変換元の値に対する `match` 式を
 /// そのまま `classify` の本体にします。この形式の後の `;` は省略できます。
 ///
 /// 型の代わりに `列挙体::*` と書くと、アームに `列挙体::` を補います。
@@ -40,17 +40,17 @@ mod derive_classify;
 ///
 /// ```ignore
 /// classify! {
-///     HogeError => LogicalError::Xxx;
-///     FugaError, BarError => LogicalError::Yyy("Yyy occurred");
-///     BazError => LogicalError, LogicalError::Zzz;
-///     HasFieldError { inner, .. }: HasFieldError => LogicalError::Other { inner: inner.to_string() };
+///     HogeError as LogicalError::Xxx;
+///     FugaError, BarError as LogicalError::Yyy("Yyy occurred");
+///     BazError as LogicalError, LogicalError::Zzz;
+///     HasFieldError { inner, .. }: HasFieldError as LogicalError::Other { inner: inner.to_string() };
 ///
-///     match SomeError::* => ConvertedError::* {
+///     match SomeError::* as ConvertedError::* {
 ///         A => AA,
 ///         B(s) => BB(s),
 ///     }
 ///
-///     match SomeError::* => OtherError {
+///     match SomeError::* as OtherError {
 ///         A => OtherError("a".to_string()),
 ///         B(s) => OtherError(s),
 ///     }

@@ -34,16 +34,16 @@ struct OtherError(String);
 // 依頼時の例そのまま
 classify! {
     // 型単位
-    HogeError => FugaError;
+    HogeError as FugaError;
 
     // enum -> enum
-    match SomeError::* => ConvertedError::* {
+    match SomeError::* as ConvertedError::* {
         A => AA,
         B(s) => BB(s),
     }
 
     // enum -> 任意の型
-    match SomeError::* => OtherError {
+    match SomeError::* as OtherError {
         A => OtherError("a".to_string()),
         B(s) => OtherError(s),
     }
@@ -85,7 +85,7 @@ mod nested {
 
 classify! {
     // 構造体バリアント・`|`・`@` 束縛・ガード・`_`・ブロック式
-    match RichError::* => Summary::* {
+    match RichError::* as Summary::* {
         Unit => Simple,
         Tuple(n) if n > 100 => Code { code: n as u16 },
         Tuple(_) => Simple,
@@ -93,14 +93,14 @@ classify! {
         Other1 | Other2 => Simple,
     };
 
-    match RichError::* => String {
+    match RichError::* as String {
         e @ (Unit | Tuple(_)) => e.to_string(),
         Named { message, .. } => { message }
         _ => "other".to_string(),
     }
 
     // `::*` なし (普通の match 式) とモジュール付きパス
-    match nested::PathError => Summary {
+    match nested::PathError as Summary {
         nested::PathError::X => Summary::Message("x".to_string()),
         nested::PathError::Y => Summary::Simple,
     }

@@ -1,4 +1,4 @@
-//! `match 変換元 => 変換先 { .. }` 形式のルール
+//! `match 変換元 as 変換先 { .. }` 形式のルール
 //!
 //! 変換元・変換先に `列挙体::*` と書いた場合、各アームのパターン・式の先頭に `列挙体::` を補う。
 
@@ -25,7 +25,7 @@ impl Parse for MatchRule {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         input.parse::<Token![match]>()?;
         let source = input.parse()?;
-        input.parse::<Token![=>]>()?;
+        input.parse::<Token![as]>()?;
         let target = input.parse()?;
 
         let content;

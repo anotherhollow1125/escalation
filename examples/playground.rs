@@ -9,9 +9,9 @@ use thiserror::Error;
 struct HogeError;
 
 classify! {
-    anyhow::Error => HogeError;
-    HogeError => FugaError;
-    FugaError => BarError::Other;
+    anyhow::Error as HogeError;
+    HogeError as FugaError;
+    FugaError as BarError::Other;
 }
 
 #[hooq(escalate)]

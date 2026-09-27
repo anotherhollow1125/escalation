@@ -54,7 +54,7 @@ enum UsecaseError {
 }
 
 classify! {
-    RepositoryError => UsecaseError::Repository;
+    RepositoryError as UsecaseError::Repository;
 }
 ```
 
@@ -112,7 +112,7 @@ The resulting `Report` keeps:
 
 ```rust
 classify! {
-    match RepositoryError::* => UsecaseError::* {
+    match RepositoryError::* as UsecaseError::* {
         UserNotFound => Repository,
         Internal => Internal,
     }

@@ -28,8 +28,8 @@ impl Connection {
 }
 
 classify! {
-    &'static str, anyhow::Error => GetError::Other;
-    &'static str, anyhow::Error => CreateError::Other;
+    &'static str, anyhow::Error as GetError::Other;
+    &'static str, anyhow::Error as CreateError::Other;
 }
 
 #[hooq(seed)]

@@ -26,8 +26,8 @@ pub mod impls {
     use crate::feature::port::{CreateError, FeatureRepository, GetError};
 
     classify! {
-        CreateError, GetError => UsecaseError::RepositoryError;
-        &'static str, std::num::ParseIntError => UsecaseError::Other;
+        CreateError, GetError as UsecaseError::RepositoryError;
+        &'static str, std::num::ParseIntError as UsecaseError::Other;
     }
 
     pub struct UsecaseImpl {
