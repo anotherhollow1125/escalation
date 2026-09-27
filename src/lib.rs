@@ -86,6 +86,24 @@ impl<E> Report<E> {
         }
     }
 
+    /// alias of `new` function.
+    pub fn from_parts(top: E, cause: ErrorCause, trace: Vec<ErrorInfo>) -> Self {
+        Self {
+            inner: top,
+            cause,
+            trace,
+        }
+    }
+
+    pub fn handle(self) -> (E, ErrorCause, Vec<ErrorInfo>) {
+        (self.inner, self.cause, self.trace)
+    }
+
+    /// alias of `handle` method.
+    pub fn into_parts(self) -> (E, ErrorCause, Vec<ErrorInfo>) {
+        (self.inner, self.cause, self.trace)
+    }
+
     /// return reference of the top error of report.
     pub fn peek(&self) -> &E {
         &self.inner
@@ -99,10 +117,6 @@ impl<E> Report<E> {
     /// return reference of the trace of report.
     pub fn trace(&self) -> &Vec<ErrorInfo> {
         &self.trace
-    }
-
-    pub fn handle(self) -> (E, ErrorCause, Vec<ErrorInfo>) {
-        (self.inner, self.cause, self.trace)
     }
 
     pub fn summarize(&self) -> String
@@ -262,8 +276,6 @@ pub trait IntoReport: Sized {
     fn into_report(self) -> Report<Self>;
 
     fn into_report_with_error_info(self, error_info: ErrorInfo) -> Report<Self>;
-
-    fn resume(self, cause: ErrorCause, trace: Vec<ErrorInfo>) -> Report<Self>;
 }
 
 impl<E> IntoReport for E
@@ -306,14 +318,6 @@ where
             inner: self,
             cause,
             trace: vec![error_info],
-        }
-    }
-
-    fn resume(self, cause: ErrorCause, trace: Vec<ErrorInfo>) -> Report<Self> {
-        Report {
-            inner: self,
-            cause,
-            trace,
         }
     }
 }

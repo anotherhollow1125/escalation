@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use clap::Parser;
-use escalation::{Classify, Handleable, IntoReport, Report, Unclassified, classify};
+use escalation::{Classify, Handleable, Report, Unclassified, classify};
 use hooq::hooq;
 use thiserror::Error;
 
@@ -23,7 +23,7 @@ fn hoge(n: usize) -> Result<(), Report<HogeError>> {
     Ok(())
 }
 
-#[derive(Debug, Error, Classify, Clone)]
+#[derive(Debug, Error, Classify)]
 #[error("FugaError")]
 struct FugaError;
 
@@ -38,7 +38,7 @@ fn fuga(n: usize) -> Result<(), Report<FugaError>> {
         Err((e, cause, trace)) => {
             eprintln!("[in fuga] {cause:?} {trace:?}");
 
-            Err(e.resume(cause, trace))
+            Err(Report::from_parts(e, cause, trace))
         }
     }
 }
@@ -68,11 +68,7 @@ fn bar(n: usize) -> Result<(), Report<BarError>> {
                 report.trace()
             );
 
-            return Err(Report::new(
-                report.peek().clone(),
-                report.cause().clone(),
-                report.trace().clone(),
-            ));
+            return Err(report);
         }
     }
 
