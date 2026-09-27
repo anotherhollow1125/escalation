@@ -82,6 +82,20 @@ classify! {
     BazError as Plain(1);
 }
 
+/// 変換元の値を所有権ごと持つ
+#[derive(Debug)]
+struct Owned<E>(E);
+
+#[derive(Debug, PartialEq)]
+struct Described(String);
+
+// `束縛名 @ 型`: 値全体の束縛 (複数の変換元・束縛なしの変換元との混在も)
+classify! {
+    error @ std::io::Error as Owned<std::io::Error>, Owned(error);
+    e @ HasFieldError, e @ Pair as Described(e.to_string());
+    _ignored @ BarError, FugaError as Plain(2);
+}
+
 /// `U: Decompose<T>` が実装されていることをコンパイル時に確認する
 fn assert_decompose<T: Display + Debug, U: Decompose<T>>() {}
 
@@ -160,4 +174,30 @@ fn decompose_is_implemented() {
     assert_decompose::<HasFieldError, Multi>();
     assert_decompose::<Pair, Multi>();
     assert_decompose::<BazError, Plain>();
+}
+
+#[test]
+fn at_binding() {
+    let Owned(io) = Owned::classify(std::io::Error::other("io failed"));
+    assert_eq!(io.to_string(), "io failed");
+
+    assert_eq!(
+        <Described as Classify<HasFieldError>>::classify(HasFieldError {
+            inner: 1,
+            other: false,
+        }),
+        Described("has field error 1 false".to_string())
+    );
+    assert_eq!(
+        <Described as Classify<Pair>>::classify(Pair(2, true)),
+        Described("Par 2 true".to_string())
+    );
+
+    assert_eq!(<Plain as Classify<BarError>>::classify(BarError), Plain(2));
+    assert_eq!(
+        <Plain as Classify<FugaError>>::classify(FugaError),
+        Plain(2)
+    );
+
+    assert_decompose::<std::io::Error, Owned<std::io::Error>>();
 }

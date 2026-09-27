@@ -6,7 +6,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::parse::{Parse, ParseStream};
 use syn::spanned::Spanned;
-use syn::{Expr, Pat, Path, Token, Type};
+use syn::{Expr, Ident, Pat, Path, Token, Type};
 
 use self::match_rule::MatchRule;
 
@@ -60,7 +60,7 @@ struct Rule {
     value: Expr,
 }
 
-/// `パターン: 型` または `型`
+/// `パターン: 型`、`束縛名 @ 型` または `型`
 struct Source {
     pat: Option<Pat>,
     ty: Type,
@@ -82,6 +82,25 @@ impl Parse for Rule {
 
 impl Parse for Source {
     fn parse(input: ParseStream) -> syn::Result<Self> {
+        // `束縛名 @ 型`: 変換元の値全体を束縛する
+        // (`パターン:` の判定より先に見ないと `名前 @ パス` がパターンとして読まれてしまう)
+        if input.peek(Ident) && input.peek2(Token![@]) {
+            let ident = input.parse::<Ident>()?;
+            input.parse::<Token![@]>()?;
+            let ty = input.parse()?;
+
+            return Ok(Source {
+                pat: Some(Pat::Ident(syn::PatIdent {
+                    attrs: Vec::new(),
+                    by_ref: None,
+                    mutability: None,
+                    ident,
+                    subpat: None,
+                })),
+                ty,
+            });
+        }
+
         let pat = parse_pattern(input)?;
         let ty = input.parse()?;
 

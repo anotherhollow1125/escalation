@@ -15,6 +15,7 @@ mod derive_classify;
 /// - `A`: 型のみ
 /// - `パターン: A`: 変換元を分解するパターン付き。
 ///   束縛された変数は変換先の式の中で参照として使えます
+/// - `束縛名 @ A`: 変換元の値全体を `束縛名` に束縛します (所有権ごと受け取るので、そのまま変換先に渡せます)
 /// - `p1: A, p2: B, C`: パターンは各型ごとに独立で、パターンのない型 (`C`) には適用されません
 ///
 /// # 変換先
@@ -44,6 +45,7 @@ mod derive_classify;
 ///     FugaError, BarError as LogicalError::Yyy("Yyy occurred");
 ///     BazError as LogicalError, LogicalError::Zzz;
 ///     HasFieldError { inner, .. }: HasFieldError as LogicalError::Other { inner: inner.to_string() };
+///     error @ anyhow::Error as Wrapped(error);
 ///
 ///     match SomeError::* as ConvertedError::* {
 ///         A => AA,

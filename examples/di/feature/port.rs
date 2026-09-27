@@ -1,6 +1,7 @@
-use escalation::Report;
+use escalation::{Classify, Report};
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Classify)]
+#[classify(Unclassified as GetError::Other)]
 pub enum GetError {
     #[error("cannnot connect to db.")]
     CannotConnect,
@@ -8,7 +9,8 @@ pub enum GetError {
     Other,
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Classify)]
+#[classify(Unclassified as CreateError::Other)]
 pub enum CreateError {
     #[error("invalid input: {0}")]
     AlreadyExist(usize),
