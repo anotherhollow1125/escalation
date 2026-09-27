@@ -67,7 +67,7 @@ pub fn classify(input: TokenStream) -> TokenStream {
 /// 自分自身と `Unclassified<E>` からの `Classify` / `Decompose` を実装する derive マクロ
 ///
 /// - `impl Classify<Self> for Self` (と `Decompose<Self>`) は常に生成します
-/// - `#[classify(Unclassified => 式)]` がある場合、任意の `E` について
+/// - `#[classify(Unclassified as 式)]` がある場合、任意の `E` について
 ///   `impl Classify<Unclassified<E>> for Self` (と `Decompose<Unclassified<E>>`) を生成し、式の値を返します。
 ///   式の中では `Self` が使えます
 ///
@@ -77,7 +77,7 @@ pub fn classify(input: TokenStream) -> TokenStream {
 ///
 /// ```ignore
 /// #[derive(Debug, thiserror::Error, Classify)]
-/// #[classify(Unclassified => Self::Internal)]
+/// #[classify(Unclassified as Self::Internal)]
 /// pub enum SomeError {
 ///     #[error("xxx")]
 ///     Xxx,

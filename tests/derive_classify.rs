@@ -4,7 +4,7 @@ use escalation::{Classify, Decompose, ErrorInfo, Escalate, Handleable, Report, U
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq, Classify)]
-#[classify(Unclassified => Self::Internal)]
+#[classify(Unclassified as Self::Internal)]
 enum SomeError {
     #[error("xxx")]
     Xxx,
@@ -21,7 +21,7 @@ struct PlainError(u8);
 
 // ジェネリクス付き・ジェネリクス名 `E` との衝突がないこと
 #[derive(Debug, Error, PartialEq, Classify)]
-#[classify(Unclassified => Self::Other)]
+#[classify(Unclassified as Self::Other)]
 enum GenericError<E: Debug + Display> {
     #[error("wrapped {0}")]
     Wrapped(E),

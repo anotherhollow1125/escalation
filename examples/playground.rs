@@ -44,7 +44,7 @@ fn fuga(n: usize) -> Result<(), Report<FugaError>> {
 }
 
 #[derive(Debug, Error, Classify)]
-#[classify(Unclassified => Self::Other)]
+#[classify(Unclassified as Self::Other)]
 enum BarError {
     #[error("just 4")]
     JustFour,

@@ -129,7 +129,7 @@ A logical error type may define a fallback classification for errors that are in
 use escalation::{Classify, Unclassified};
 
 #[derive(Debug, Error, Classify)]
-#[classify(Unclassified => Self::Internal)]
+#[classify(Unclassified as Self::Internal)]
 enum AppError {
     #[error("internal error")]
     Internal,

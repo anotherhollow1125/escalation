@@ -5,7 +5,7 @@ use quote::{format_ident, quote};
 use syn::parse::{Parse, ParseStream};
 use syn::{DeriveInput, Expr, GenericParam, Ident, Token, parse_quote};
 
-/// `#[classify(Unclassified => 式)]` の中身
+/// `#[classify(Unclassified as 式)]` の中身
 struct UnclassifiedRule {
     value: Expr,
 }
@@ -16,11 +16,11 @@ impl Parse for UnclassifiedRule {
         if key != "Unclassified" {
             return Err(syn::Error::new(
                 key.span(),
-                "expected `Unclassified => expr`",
+                "expected `Unclassified as expr`",
             ));
         }
 
-        input.parse::<Token![=>]>()?;
+        input.parse::<Token![as]>()?;
         let value = input.parse()?;
 
         Ok(UnclassifiedRule { value })
@@ -42,7 +42,7 @@ pub(crate) fn expand(input: DeriveInput) -> syn::Result<TokenStream2> {
         if unclassified.is_some() {
             return Err(syn::Error::new_spanned(
                 attr,
-                "duplicate `#[classify(Unclassified => ...)]` attribute",
+                "duplicate `#[classify(Unclassified as ...)]` attribute",
             ));
         }
 
