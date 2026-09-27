@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use clap::Parser;
-use escalation::{Classify, Report, Unclassified, classify};
+use escalation::{Classify, Handleable, IntoReport, Report, Unclassified, classify};
 use hooq::hooq;
 use thiserror::Error;
 
@@ -23,16 +23,24 @@ fn hoge(n: usize) -> Result<(), Report<HogeError>> {
     Ok(())
 }
 
-#[derive(Debug, Error, Classify)]
+#[derive(Debug, Error, Classify, Clone)]
 #[error("FugaError")]
 struct FugaError;
 
 #[hooq(escalate)]
 #[hooq::error = FugaError]
 fn fuga(n: usize) -> Result<(), Report<FugaError>> {
-    hoge(n)?;
+    let res = hoge(n);
 
-    Ok(())
+    #[hooq::skip]
+    match res.handle() {
+        Ok(()) => Ok(()),
+        Err((e, cause, trace)) => {
+            eprintln!("[in fuga] {cause:?} {trace:?}");
+
+            Err(e.resume(cause, trace))
+        }
+    }
 }
 
 #[derive(Debug, Error, Classify)]
@@ -50,7 +58,22 @@ fn bar(n: usize) -> Result<(), Report<BarError>> {
         #[hooq::error = BarError::JustFour]
         fuga(n)?;
     } else {
-        fuga(n)?;
+        let r = fuga(n);
+
+        if let Err(report) = r {
+            eprintln!(
+                "[in bar] {:?} {:?} {:?}",
+                report.peek(),
+                report.cause(),
+                report.trace()
+            );
+
+            return Err(Report::new(
+                report.peek().clone(),
+                report.cause().clone(),
+                report.trace().clone(),
+            ));
+        }
     }
 
     if n > 1000 {
