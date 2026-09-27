@@ -146,6 +146,23 @@ Trace:
             cause.display, trace
         )
     }
+
+    pub fn map<T, F>(self, f: F) -> Report<T>
+    where
+        F: FnOnce(E) -> T,
+    {
+        let Report {
+            inner,
+            cause,
+            trace,
+        } = self;
+
+        Report {
+            inner: f(inner),
+            cause,
+            trace,
+        }
+    }
 }
 
 impl<E> Display for Report<E>
