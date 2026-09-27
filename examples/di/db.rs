@@ -7,7 +7,6 @@ use hooq::hooq;
 use crate::feature::port::{CreateError, FeatureRepository, GetError};
 
 classify! {
-    error @ anyhow::Error as DbError, DbError(error);
     &'static str, DbError as GetError::Other;
     &'static str, DbError as CreateError::Other;
 }
@@ -20,7 +19,7 @@ struct Connection {
 
 #[derive(Debug, thiserror::Error, Classify)]
 #[error("Db error reason: {0}")]
-struct DbError(#[from] anyhow::Error);
+struct DbError(#[classify] &'static str);
 
 impl Connection {
     fn get_user(&self, id: usize) -> Option<usize> {
@@ -30,7 +29,7 @@ impl Connection {
     #[hooq(escalate)]
     fn innsert_user(&mut self, id: usize) -> Result<(), Report<DbError>> {
         if !self.user_table.insert(id) {
-            return Err(anyhow::anyhow!("Db return false"));
+            return Err("Db return false");
         }
 
         Ok(())
@@ -46,7 +45,7 @@ fn connect_db(flag: bool) -> Result<&'static Mutex<Connection>, Report<DbError>>
     });
 
     if !flag {
-        return Err(anyhow::anyhow!("db doesn't work."));
+        return Err("db doesn't work.");
     }
 
     Ok(&CONNECTION)
