@@ -1,5 +1,6 @@
 use std::any::type_name;
 use std::fmt::{Debug, Display};
+use std::marker::PhantomData;
 use std::panic::Location;
 
 pub use escalation_macros::{Classify, classify};
@@ -44,10 +45,17 @@ pub trait Classify<T> {
 }
 
 #[doc(hidden)]
-pub struct Decomposed<T> {
+pub struct DecomposedWithClassify<T> {
     cause: ErrorCause,
     trace: Vec<ErrorInfo>,
     classified: T,
+}
+
+#[doc(hidden)]
+pub struct Decomposed<T> {
+    cause: ErrorCause,
+    trace: Vec<ErrorInfo>,
+    phantom: PhantomData<T>,
 }
 
 #[doc(hidden)]
@@ -63,6 +71,20 @@ where
         };
 
         Decomposed {
+            cause,
+            trace: Vec::new(),
+            phantom: PhantomData,
+        }
+    }
+
+    fn decompose_with_classify(error: T) -> DecomposedWithClassify<Self> {
+        let cause = ErrorCause {
+            display: error.to_string(),
+            debug: format!("{error:?}"),
+            error_type_name: type_name::<T>(),
+        };
+
+        DecomposedWithClassify {
             cause,
             trace: Vec::new(),
             classified: Self::classify(error),
@@ -227,9 +249,23 @@ where
     T: Display + Debug,
     U: Classify<T>,
 {
-    fn decompose(report: Report<T>) -> Decomposed<U> {
+    fn decompose_with_classify(report: Report<T>) -> DecomposedWithClassify<U> {
         let Report {
             inner,
+            cause,
+            trace,
+        } = report;
+
+        DecomposedWithClassify {
+            cause,
+            trace,
+            classified: U::classify(inner),
+        }
+    }
+
+    fn decompose(report: Report<T>) -> Decomposed<U> {
+        let Report {
+            inner: _,
             cause,
             trace,
         } = report;
@@ -237,7 +273,7 @@ where
         Decomposed {
             cause,
             trace,
-            classified: U::classify(inner),
+            phantom: PhantomData,
         }
     }
 }
@@ -273,16 +309,31 @@ where
     U: Decompose<T>,
 {
     fn escalate(self, location: ErrorInfo, specified: Option<U>) -> Report<U> {
-        let Decomposed {
-            cause,
-            mut trace,
-            classified,
-        } = U::decompose(self);
+        let (cause, mut trace, classified) = match specified {
+            Some(classified) => {
+                let Decomposed {
+                    cause,
+                    trace,
+                    phantom: _,
+                } = U::decompose(self);
+
+                (cause, trace, classified)
+            }
+            None => {
+                let DecomposedWithClassify {
+                    cause,
+                    trace,
+                    classified,
+                } = U::decompose_with_classify(self);
+
+                (cause, trace, classified)
+            }
+        };
 
         trace.push(location);
 
         Report {
-            inner: specified.unwrap_or(classified),
+            inner: classified,
             cause,
             trace,
         }
